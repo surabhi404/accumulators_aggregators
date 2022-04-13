@@ -1,0 +1,30 @@
+# find the most k most collaborative people, based on the number 
+# of degrees sorting first based on the number of collaborations
+# and then in case of a tie by the number of coworkers
+#
+CREATE QUERY top_k_most_collaborative_researchers(INT k, FILE f) FOR GRAPH Collaboration
+{
+# @num_collaborations is a local accumulator, meaning each vertex 
+# selected by the SELECT clause will have it own @num_collaborations
+# value, so there are x vertices returned by the SELECT, then there 
+# will be x @num_collaborations 
+#   
+  SumAccum<INT> @num_collaborations;
+    
+# start is a set of vertices of type Person and all its attributes
+#   
+  start = {Person.*};
+# result is a set of edges selected by the SELECT clause below
+#   
+  result = SELECT s FROM start:s -((coauthored):e)-> Person:v
+                 ACCUM s.@num_collaborations += 1
+                 ORDER BY s.@num_collaborations DESC
+                 LIMIT k;
+  PRINT result;
+# Print the results to a file too
+#
+  f.println("Vertex_ID", "Community", "num_collaborators");
+  Start = SELECT s FROM results:s
+                POST-ACCUM f.println(s.id, s.community,
+                                     s.@num_collaborations);
+}
