@@ -1,0 +1,60 @@
+#
+# It accesses the vertex's built-in outdegree function to  
+#
+# The MapAccum returns a set of key-value pairs (X, Y) where
+#  - X = # of out going edges
+#  - Y = the # of vertices that have x out going edges
+#
+# if a MapAccum contains [('2',4), ('100',4)...], then 
+# MapAccum += ('75'->2) adds ('75',2) to it and yields
+# [('2',4),('100',4),..., ('75', 2)]
+#
+CREATE QUERY edge_histogram() FOR GRAPH Collaboration
+{
+# Create a global MapAccum accumulator called histogram
+#
+  MapAccum<int, int> @@histogram;
+# start is a set that contains vertex type Person and
+# all the contributes in Person
+ 
+ start = {Person.*};
+# s.outdegree() is a built-in function for a vertex alias (only
+# works when it's used w/ a vertex alias in SELECT, as shown
+# below).  outdegree returns the number of outgoing or undirected
+# edges connected to the vertex
+#
+# selections is a set of all the vertices from SELECT
+# for every vertex alias (s) that is processed by this SELECT,
+# the key value pair of (s.outdegree, 1) is added to the MapAccum.
+# 
+# The accumulator take one more step to take all the (k, v) pairs
+# and return (k, sum(v)).
+# 
+results = SELECT s From start:s
+            ACCUM @@histogram += (s.outdegree("coauthored") -> 1);
+ PRINT @@histogram;
+}
+[
+  {
+    "@@histogram": {
+      "0": 127966,
+      "1": 62212,
+      "2": 33998,
+      "3": 20989,
+      "4": 13956,
+      ...........
+      ...........
+      ...........
+      "201": 1,
+      "204": 1,
+      "206": 1,
+      "208": 1,
+      "213": 2,
+      "222": 1,
+      "242": 1,
+      "254": 1,
+      "267": 1,
+      "306": 1
+    }
+  }
+]
