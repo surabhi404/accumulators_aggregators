@@ -1,0 +1,42 @@
+CREATE QUERY graph_summary() FOR GRAPH Collaboration {
+# We have 2 global accumulators of the type SumAccum, which sums
+# the target (edges or vertices) return from a query
+  SumAccum<FLOAT> @@n_researchers;  # represented by vertices
+  SumAccum<FLOAT> @@n_collaborations;  # represented by edges
+  FLOAT edge_per_vertex;
+  FLOAT density;
+# start is a set of vertices of the type Person, which is the only 
+# vertex type we have in this schema
+# Here the wild card '*' is used to include all attributes from
+# the Person vertex
+#
+  start={Person.*};
+# vertices is an object containing a set of vertices returned 
+# from the SELECT statement.
+#
+# @@n_researcher is a global accumulator of the type SumAccum,
+# the @@ preceding the "n_researcher" indicated it's a global accumulator
+#
+# the accumulator increments by one for every vertex returned by 
+# the SELECT
+#
+  vertices = SELECT s FROM start:s
+                   ACCUM @@n_researchers +=1;
+# the syntax for retrieving edges is similar to that for vertices,
+# but you need to specify the edge that connects the vertices
+# 
+# edges is an object containing a set of edges selected by SELECT
+# clause.  
+# the global accumulator @@n_collaborations increments by one for 
+# every edge found by the SELECT clause
+#
+  edges = SELECT s FROM start:s - (coauthored)-> :t
+                ACCUM @@n_collaborations += 1;
+  edge_per_vertex = @@n_collaborations / @@n_researchers;
+  density = @@n_collaborations / 
+             (@@n_researchers *(@@n_researchers -1) / 2);
+  PRINT @@n_researchers;
+  PRINT @@n_collaborations;
+  PRINT edge_per_vertex;
+  PRINT density;
+}
